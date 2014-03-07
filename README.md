@@ -1,11 +1,11 @@
-Descanse
+Yasunde
 ========
 
 A really really simple API framework for PHP.
 
 ## The name
 
-"Descanse" is the Spanish translation for "rest".
+"Yasunde" is the Japanese translation for "rest".
 
 ## Requirements
 
@@ -54,5 +54,6 @@ Descanse::go();
 - *auto_register*: true to search in all declared classes those whose name ends with "Service", false to allow manual registration. To do so, use the *Descanse::registerService($name)** method.
 
 ## License
+Yasunde is forked from [Descanse](https://github.com/joelalejandro/Descanse).
 
 Descanse is licensed under the MIT License.
