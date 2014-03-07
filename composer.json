@@ -1,15 +1,15 @@
 {
-    "name": "joelalejandro/descanse",
+    "name": "gowondesigns/yasunde",
     "type": "library",
-    "description": "Super-simple routing for PHP",
+    "description": "Simple PHP REST API Framework",
     "keywords": ["routing","simple","web service"],
-    "homepage": "http://github.com/joelalejandro/Descanse",
+    "homepage": "http://github.com/gowondesigns/yasunde",
     "license": "MIT",
     "authors": [
         {
-            "name": "Joel A. Villarreal Bertoldi",
-            "email": "hola@joelalejandro.com",
-            "homepage": "http://joelalejandro.com",
+            "name": "Gowon Patterson",
+            "email": "info@gowondesigns.com",
+            "homepage": "http://gowondesigns.com",
             "role": "Developer"
         }
     ],
@@ -18,7 +18,7 @@
     },
     "autoload": {
         "psr-0": {
-            "Descanse": "src"
+            "yasunde": "src"
         }
     }
 }
