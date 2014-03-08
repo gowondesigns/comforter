@@ -11,7 +11,7 @@ use Yasunde\Yasunde;
  */
 class ProfileService {
     public static function getUser($context) {
-        return array("name" => "Gowon Designs", "age" => 88, "context" => $context);
+        return array("name" => "Gowon Designs", "id" => 88, "context" => $context);
     }
 }
 /**/
@@ -19,4 +19,4 @@ class ProfileService {
 /**
  * Attend the request!
  */
-Yasunde::go();
+Yasunde::Start();
