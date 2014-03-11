@@ -1,9 +1,9 @@
 {
     "name": "gowondesigns/comforter",
     "type": "library",
-    "description": "Simple PHP RESTful Micro-framework",
+    "description": "A RESTful PHP micro-framework for web applications and APIs.",
     "keywords": ["routing","simple","web service"],
-    "homepage": "http://github.com/gowondesigns/yasunde",
+    "homepage": "http://github.com/gowondesigns/comforter",
     "license": "MIT",
     "authors": [
         {

@@ -6,12 +6,8 @@ class Api
     private static $autoRegister = true;
     private static $services = array();
     private static $encoders = array('application/json' => 'json_encode', 'text/plain' => 'Api::PlainTextEncoder');
+    private static $defaultEncoder = 'application/json';
     private static $verbs = array("options", "get", "head", "post", "put", "delete", "trace", "connect");
-
-    private static $settings = array(
-        "auto_register" => true,
-        "verbs" => array("options", "get", "head", "post", "put", "delete", "trace", "connect")
-    );
 
     /*
      * Private Methods
@@ -29,6 +25,8 @@ class Api
 
         $service = self::GetServiceBySlug($uri[0]);
         $method = self::GetMethodBySlug($service, $uri[1], $http_method);
+
+        // TODO This must be changed: UserProfileService != UserprofileService
         $serviceName = ucfirst($uri[0]) . 'Service';
 
         try {
@@ -37,20 +35,24 @@ class Api
                 "request" => $_REQUEST,
                 "args" => array_slice($uri, 2)
             ));
-        }
-        catch (\Exception $e) {
+        } catch (\Exception $e) {
             header("HTTP/1.1 500 Internal Server Error");
             $data = $e->getMessage();
         }
 
-        switch ($format) {
-            case "text/plain":
-                $response = $data;
-                break;
-            case "application/json":
-            default:
-                $response = json_encode($data);
-                break;
+        if (isset(self::$encoders[$format])) {
+            $encoder = self::$encoders[$format];
+        } elseif (self::$defaultEncoder !== null && isset(self::$encoders[self::$defaultEncoder])) {
+            $encoder = self::$encoders[self::$defaultEncoder];
+        } else {
+            self::FailRequest();
+        }
+
+        if (strpos($encoder, '::')) {
+            list($class, $method) = explode("::", $encoder);
+            $response = $class::{$method}($data);
+        } else {
+            $response = $encoder($data);
         }
 
         header("Content-Type: $format");
@@ -82,10 +84,8 @@ class Api
     private static function GetHttpHeaders()
     {
         $headers = '';
-        foreach ($_SERVER as $name => $value)
-        {
-            if (substr($name, 0, 5) == 'HTTP_')
-            {
+        foreach ($_SERVER as $name => $value) {
+            if (substr($name, 0, 5) == 'HTTP_') {
                 $headers[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))))] = $value;
             }
         }
@@ -106,7 +106,7 @@ class Api
 
         $slug = strtolower(str_replace("Service", "", $serviceName));
         foreach (self::GetServiceMethods($serviceName) as $method) {
-            foreach (self::$settings["verbs"] as $http_method) {
+            foreach (self::$verbs as $http_method) {
                 if (stripos($method->name, $http_method) === 0) {
                     $newService[strtolower(str_replace($http_method, "", $method->name))][$http_method] = $method->name;
                     break;
@@ -127,10 +127,9 @@ class Api
      * Public Methods
      */
 
-
     public static function Start()
     {
-        if (self::$settings["auto_register"]) {
+        if (self::$autoRegister) {
             // TODO Handle multiple namespaces
             foreach (array_filter(get_declared_classes(), function ($c) {
                 return strrpos($c, "Service") !== false;
@@ -140,6 +139,11 @@ class Api
         }
 
         self::AttendRequest();
+    }
+
+    public static function PlainTextEncoder($data)
+    {
+        return $data;
     }
 
     public static function RegisterService($service_name)
@@ -152,42 +156,52 @@ class Api
         self::RegisterSingleService($service_name);
     }
 
-    public static function PlainTextEncoder($data) {
-        return $data;
-    }
-
-    public static function RegisterEncoder($type, $callback) {
+    public static function RegisterEncoder($type, $callback)
+    {
         if ($callback === null) {
             unset(self::$encoders[$type]);
         }
         self::$encoders[$type] = $callback;
     }
 
-    public static function SetAutoRegisterService($bool) {
+    public static function RegisterHttpRequestMethod($string)
+    {
+        self::$verbs[] = $string;
+    }
+
+
+    public static function SetAutoRegisterService($bool)
+    {
         if (is_bool($bool)) {
             self::$autoRegister = $bool;
         }
         trigger_error('Setting must be boolean.', E_USER_ERROR);
     }
 
-    public static function RegisterHttpRequestMethod($string) {
-        self::$verbs[] = $string;
+    public static function SetDefaultEncoder($encoder)
+    {
+        if ((isset(self::$encoders[$encoder]))) {
+            self::$defaultEncoder = $encoder;
+        }
+        trigger_error('"' . $encoder . '" has not been mapped.', E_USER_ERROR);
     }
 }
 
-abstract class AbstractServiceClass {
-    protected static function AddHeader($key, $value = '') {
+abstract class AbstractServiceClass
+{
+    protected static function AddHeader($key, $value = '')
+    {
         if (is_array($key)) {
             foreach ($key as $name => $val) {
                 header($name . ': ' . $val);
             }
-        }
-        elseif (is_string($key)) {
+        } elseif (is_string($key)) {
             header($key . ': ' . $value);
         }
     }
 
-    protected static function SendHttpResponse($code) {
+    protected static function SendHttpResponse($code)
+    {
         // Last Updated: 3/7/14
         // Based on the list of HTTP Response Codes:
         // http://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
@@ -258,11 +272,9 @@ abstract class AbstractServiceClass {
             if ($code >= 400) {
                 exit;
             }
-        }
-        elseif (is_string($code)) {
+        } elseif (is_string($code)) {
             header($protocol . ' ' . $code);
-        }
-        else {
+        } else {
             trigger_error('Unsupported response code or object type "' . $code . '" was given.', E_USER_ERROR);
         }
     }

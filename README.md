@@ -1,7 +1,7 @@
 {~} Comforter
 ========
 
-A RESTful PHP micro-framework for developing web applications and APIs.
+A RESTful PHP micro-framework for web applications and APIs.
 
 ## Requirements
 
@@ -23,7 +23,7 @@ PHP >= 5.3.0
 // user.php
 class UserService {
   public static function getName($context) {
-    return array("first" => "Joel", "last" => "Villarreal");
+    return array("first" => "John", "last" => "Doe");
   }
 }
 ```
