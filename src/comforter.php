@@ -1,20 +1,21 @@
 <?php
-namespace Yasunde;
+namespace Comforter;
 
-class Yasunde
+class Api
 {
-    private static $services;
+    private static $autoRegister = true;
+    private static $services = array();
+    private static $encoders = array('application/json' => 'json_encode', 'text/plain' => 'Api::PlainTextEncoder');
+    private static $verbs = array("options", "get", "head", "post", "put", "delete", "trace", "connect");
 
-    public static $settings = array(
+    private static $settings = array(
         "auto_register" => true,
         "verbs" => array("options", "get", "head", "post", "put", "delete", "trace", "connect")
     );
 
-    private static function FailRequest()
-    {
-        header("HTTP/1.1 400 Bad Request");
-        exit;
-    }
+    /*
+     * Private Methods
+     */
 
     private static function AttendRequest()
     {
@@ -73,11 +74,22 @@ class Yasunde
         return $service[$resource_slug][$verb];
     }
 
-
-
     private static function GetServiceMethods($class_name)
     {
         return (new \ReflectionClass($class_name))->getMethods(\ReflectionMethod::IS_PUBLIC);
+    }
+
+    private static function GetHttpHeaders()
+    {
+        $headers = '';
+        foreach ($_SERVER as $name => $value)
+        {
+            if (substr($name, 0, 5) == 'HTTP_')
+            {
+                $headers[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))))] = $value;
+            }
+        }
+        return $headers;
     }
 
     private static function RegisterSingleService($name)
@@ -105,18 +117,16 @@ class Yasunde
         self::$services[$slug] = $newService;
     }
 
-    private static function GetHttpHeaders()
+    private static function FailRequest()
     {
-        $headers = '';
-        foreach ($_SERVER as $name => $value)
-        {
-            if (substr($name, 0, 5) == 'HTTP_')
-            {
-                $headers[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))))] = $value;
-            }
-        }
-        return $headers;
+        header("HTTP/1.1 400 Bad Request");
+        exit;
     }
+
+    /*
+     * Public Methods
+     */
+
 
     public static function Start()
     {
@@ -142,9 +152,30 @@ class Yasunde
         self::RegisterSingleService($service_name);
     }
 
+    public static function PlainTextEncoder($data) {
+        return $data;
+    }
+
+    public static function RegisterEncoder($type, $callback) {
+        if ($callback === null) {
+            unset(self::$encoders[$type]);
+        }
+        self::$encoders[$type] = $callback;
+    }
+
+    public static function SetAutoRegisterService($bool) {
+        if (is_bool($bool)) {
+            self::$autoRegister = $bool;
+        }
+        trigger_error('Setting must be boolean.', E_USER_ERROR);
+    }
+
+    public static function RegisterHttpRequestMethod($string) {
+        self::$verbs[] = $string;
+    }
 }
 
-abstract class ServiceAbstract {
+abstract class AbstractServiceClass {
     protected static function AddHeader($key, $value = '') {
         if (is_array($key)) {
             foreach ($key as $name => $val) {

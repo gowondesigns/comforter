@@ -2,8 +2,7 @@
 /**
  * Load the framework.
  */
-require "yasunde.php";
-use Yasunde\Yasunde;
+require "comforter.php";
 
 /**
  * Example web service
@@ -11,7 +10,7 @@ use Yasunde\Yasunde;
  */
 class ProfileService {
     public static function getUser($context) {
-        return array("name" => "Gowon Designs", "id" => 88, "context" => $context);
+        return array("name" => "John Doe", "id" => 9, "context" => $context);
     }
 }
 /**/
@@ -19,4 +18,4 @@ class ProfileService {
 /**
  * Attend the request!
  */
-Yasunde::Start();
+\Comforter\Api::Start();

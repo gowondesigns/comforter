@@ -1,7 +1,7 @@
 {
-    "name": "gowondesigns/yasunde",
+    "name": "gowondesigns/comforter",
     "type": "library",
-    "description": "Simple PHP REST API Framework",
+    "description": "Simple PHP RESTful Micro-framework",
     "keywords": ["routing","simple","web service"],
     "homepage": "http://github.com/gowondesigns/yasunde",
     "license": "MIT",
@@ -18,7 +18,7 @@
     },
     "autoload": {
         "psr-0": {
-            "Yasunde": "src"
+            "Comforter": "src"
         }
     }
 }
