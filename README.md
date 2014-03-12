@@ -12,11 +12,13 @@ PHP >= 5.3.0
 1. Add the .htaccess file included in this repository. This file redirects all incoming requests to a single dispatcher.
 2. Create a dispatcher file (i.e. index.php) that includes Comforter.
 3. Create a class that has the word "Service" as a suffix (UserService, SearchService, etc.).
-4. Create a method in that class with a name starting with an HTTP Verb like get, post, put or delete (i.e. getUser, postUser, putUser, deleteUser, etc.). The method must return a PHP type, object or array.
+4. Create a method in that class with a name starting with an HTTP Request Method verb like get, post, put or delete (i.e. getUser, postUser, putUser, deleteUser, etc.). The method must return a PHP type, object or array.
 5. Include the Service class in the dispatcher (this is done automatically by default).
 6. Start Comforter.
 
-## A Service Class example
+## Example
+
+### Sample Service Class
 
 ```php
 <?php
@@ -26,16 +28,19 @@ class UserService {
     return array("first" => "John", "last" => "Doe");
   }
 }
+?>
 ```
 
-## The Dispatcher
+### Sample Dispatcher
 
 ```php
 <?php
+// index.php
 require "comforter.php";
 require "user.php";
 
 \Comforter\Api::Start();
+?>
 ```
 
 ## Guidelines
@@ -52,7 +57,11 @@ require "user.php";
 
 ## Settings
 
-- __auto_register__: true to search in all declared classes those whose name ends with "Service", false to allow manual registration. To do so, use the *Api::RegisterService($name)* method.
+- __autoRegister__: true to search in all declared classes those whose name ends with "Service", false to allow manual registration. To do so, use the *Api::RegisterService($name)* method.
+- __enableGzip__
+- __encoders__
+- __defaultEncoder__
+- __verbs__
 
 ## License
 

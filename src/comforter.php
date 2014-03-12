@@ -4,8 +4,13 @@ namespace Comforter;
 class Api
 {
     private static $autoRegister = true;
+    private static $enableGzip = true;
     private static $services = array();
-    private static $encoders = array('application/json' => 'json_encode', 'text/plain' => 'Api::PlainTextEncoder');
+    private static $encoders = array(
+        'application/json' => 'json_encode',
+        'text/plain' => 'Api::PlainTextEncoder'
+    );
+
     private static $defaultEncoder = 'application/json';
     private static $verbs = array("options", "get", "head", "post", "put", "delete", "trace", "connect");
 
@@ -16,18 +21,22 @@ class Api
     private static function AttendRequest()
     {
         // take into account the relative location of "index.php" to the domain root
-        // TODO properly handle the last trailing slash and parse out the query string. Use regex.
-        $uri = explode("/", substr($_SERVER["REQUEST_URI"], strlen(substr($_SERVER["PHP_SELF"], 0, -9))));
+        // parse out query string as an argument
+        /*  /{0,1}((/?\?|/?\#)([^\s])*)?$ */
+        $uri = preg_replace('/\/{0,1}((\/?\?|\/?\#)([^\s])*)?$/', '', substr($_SERVER["REQUEST_URI"], strlen(substr($_SERVER["PHP_SELF"], 0, -9))));
+        $uri = explode("/", $uri);
         $http_method = strtolower($_SERVER["REQUEST_METHOD"]);
         $format = strpos($_SERVER["HTTP_ACCEPT"], ",")
             ? explode(",", $_SERVER["HTTP_ACCEPT"])[0]
             : $_SERVER["HTTP_ACCEPT"];
 
-        $service = self::GetServiceBySlug($uri[0]);
-        $method = self::GetMethodBySlug($service, $uri[1], $http_method);
+        if (count($uri) < 2) {
+            self::FailRequest();
+        }
 
-        // TODO This must be changed: UserProfileService != UserprofileService
-        $serviceName = ucfirst($uri[0]) . 'Service';
+        $serviceName = self::GetServiceBySlug($uri[0]);
+        $method = self::GetMethodBySlug($serviceName, $uri[1], $http_method);
+        $serviceName .= 'Service';
 
         try {
             $data = $serviceName::{$method}(array(
@@ -57,19 +66,31 @@ class Api
 
         header("Content-Type: $format");
         header("Content-Length: " . strlen($response));
+
+        if (self::$enableGzip && strpos($_SERVER["HTTP_ACCEPT_ENCODING"], 'gzip') !== false) {
+            ob_start(function ($buffer, $mode) {
+                return ob_get_length() >= 860 ? ob_gzhandler($buffer, $mode) : $buffer;
+            });
+        }
         echo $response;
+        ob_end_flush();
     }
 
     private static function GetServiceBySlug($slug)
     {
-        if (count(self::$services) == 0 || !isset(self::$services[$slug])) {
-            self::FailRequest();
+        if (count(self::$services) > 0) {
+            foreach(self::$services as $key => $value) {
+                if ((strcasecmp($slug, end(explode("\\", $key))) == 0))
+                    return $key;
+            }
         }
-        return self::$services[$slug];
+
+        self::FailRequest();
     }
 
-    private static function GetMethodBySlug($service, $resource_slug, $verb)
+    private static function GetMethodBySlug($serviceName, $resource_slug, $verb)
     {
+        $service = self::$services[$serviceName];
         if (!isset($service[$resource_slug][$verb])) {
             self::FailRequest();
         }
@@ -104,7 +125,7 @@ class Api
         }
 
 
-        $slug = strtolower(str_replace("Service", "", $serviceName));
+        $slug = str_replace("Service", "", $serviceName);
         foreach (self::GetServiceMethods($serviceName) as $method) {
             foreach (self::$verbs as $http_method) {
                 if (stripos($method->name, $http_method) === 0) {
@@ -130,7 +151,8 @@ class Api
     public static function Start()
     {
         if (self::$autoRegister) {
-            // TODO Handle multiple namespaces
+            // TODO Use Regex, maybe allow use to Set Service Namespace
+            // <ServiceNameSpace>\(*)Service
             foreach (array_filter(get_declared_classes(), function ($c) {
                 return strrpos($c, "Service") !== false;
             }) as $service) {
@@ -169,11 +191,18 @@ class Api
         self::$verbs[] = $string;
     }
 
-
-    public static function SetAutoRegisterService($bool)
+    public static function UseAutoRegisterService($bool)
     {
         if (is_bool($bool)) {
             self::$autoRegister = $bool;
+        }
+        trigger_error('Setting must be boolean.', E_USER_ERROR);
+    }
+
+    public static function UseGzipCompression($bool)
+    {
+        if (is_bool($bool)) {
+            self::$enableGzip = $bool;
         }
         trigger_error('Setting must be boolean.', E_USER_ERROR);
     }
