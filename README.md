@@ -3,6 +3,12 @@
 
 A RESTful PHP micro-framework for web applications and APIs.
 
+## Features
+- Automatic Routing - Comforter can search and register service classes for routing automatically. Disable to register services manually.
+- Custom Encoders - Set encoders to handle any format request.
+- Custom HTTP Request Methods - Add non standard verbs for Comforter to route to your services.
+- Gzip Compression
+
 ## Requirements
 
 PHP >= 5.3.0
@@ -28,7 +34,6 @@ class UserService {
     return array("first" => "John", "last" => "Doe");
   }
 }
-?>
 ```
 
 ### Sample Dispatcher
@@ -40,28 +45,18 @@ require "comforter.php";
 require "user.php";
 
 \Comforter\Api::Start();
-?>
 ```
 
 ## Guidelines
 
-- Comforter creates routes automatically. Thus, UserProfileService becomes /userprofile/, and UserProfileService::getUserData() becomes GET /userprofile/userdata.
+- Comforter can create routes automatically. Thus, `/userprofile/` => `UserProfileService` and `GET /userprofile/userdata/` => `UserProfileService::getUserData()`
 - All methods within the Service class must be *static*.
 - All methods within the Service class must contain a *$context* argument, which contains an array with three keys:
     * __request__ contains $_REQUEST data
     * __args__ contains all of the slugs in the URL beyond the second slash
     * __headers__ contains all the HTTP Headers that were sent along with the request
-- All methods must start with an HTTP Request Method verb, like *get*, *post*, *put*, *delete*, *options*, etc. You can even register new verbs to be used with your application.
+- All methods must start with an HTTP Request Method verb, like *get*, *post*, *put*, *delete*, *options*, etc.
 - The 'Accept' header defines the API method's output. If Accept is 'application/json', it'll automatically encode the data.
-    * Custom encoders can be registered with Comforter to export data into any format.
-
-## Settings
-
-- __autoRegister__: true to search in all declared classes those whose name ends with "Service", false to allow manual registration. To do so, use the *Api::RegisterService($name)* method.
-- __enableGzip__
-- __encoders__
-- __defaultEncoder__
-- __verbs__
 
 ## License
 

@@ -13,7 +13,6 @@ class ProfileService {
         return array("name" => "John Doe", "id" => 9, "context" => $context);
     }
 }
-/**/
 
 /**
  * Attend the request!

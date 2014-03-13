@@ -1,28 +1,90 @@
 <?php
+/**
+ * Comforter - A RESTful PHP micro-framework for web applications and APIs
+ *
+ * @author      Gowon Patterson <info@gowondesigns.com>
+ * @copyright   2014 Gowon Patterson, Gowon Designs
+ * @link        http://www.gowondesigns.com
+ * @license     http://www.gowondesigns.com/license
+ * @version     1.0.0
+ * @package     Comforter
+ *
+ * MIT LICENSE
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+ * LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+ * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 namespace Comforter;
 
+/**
+ * Api
+ * @package Comforter
+ * @author  Gowon Patterson
+ * @since   1.0.0
+ */
 class Api
 {
+    /**
+     * @var bool
+     */
     private static $autoRegister = true;
+
+    /**
+     * @var bool
+     */
     private static $enableGzip = true;
+
+    /**
+     * @var string
+     */
+    private static $serviceNamespace = null;
+
+    /**
+     * @var string
+     */
+    private static $defaultEncoder = 'application/json';
+
+    /**
+     * @var array
+     */
     private static $services = array();
+
+    /**
+     * @var string[]
+     */
+    private static $verbs = array("options", "get", "head", "post", "put", "delete", "trace", "connect");
+
+    /**
+     * @var array
+     */
     private static $encoders = array(
         'application/json' => 'json_encode',
         'text/plain' => 'Api::PlainTextEncoder'
     );
 
-    private static $defaultEncoder = 'application/json';
-    private static $verbs = array("options", "get", "head", "post", "put", "delete", "trace", "connect");
-
-    /*
-     * Private Methods
+    /**
+     * Process URI and HTTP Request Headers, and route the request.
      */
-
     private static function AttendRequest()
     {
-        // take into account the relative location of "index.php" to the domain root
-        // parse out query string as an argument
-        /*  /{0,1}((/?\?|/?\#)([^\s])*)?$ */
+        // Take into account the relative location of "index.php" to the domain root
+        /* Parse out query string as an argument: /{0,1}((/?\?|/?\#)([^\s])*)?$ */
         $uri = preg_replace('/\/{0,1}((\/?\?|\/?\#)([^\s])*)?$/', '', substr($_SERVER["REQUEST_URI"], strlen(substr($_SERVER["PHP_SELF"], 0, -9))));
         $uri = explode("/", $uri);
         $http_method = strtolower($_SERVER["REQUEST_METHOD"]);
@@ -76,6 +138,11 @@ class Api
         ob_end_flush();
     }
 
+    /**
+     * Gather the service based on the resource requested.
+     * @param string $slug
+     * @return string
+     */
     private static function GetServiceBySlug($slug)
     {
         if (count(self::$services) > 0) {
@@ -88,20 +155,37 @@ class Api
         self::FailRequest();
     }
 
-    private static function GetMethodBySlug($serviceName, $resource_slug, $verb)
+    /**
+     * Gather the method to route the request to based on the Service Class,
+     * URI, and HTTP Request Method.
+     * @param string $serviceName
+     * @param string $resourceSlug
+     * @param string $verb
+     * @return string
+     */
+    private static function GetMethodBySlug($serviceName, $resourceSlug, $verb)
     {
         $service = self::$services[$serviceName];
-        if (!isset($service[$resource_slug][$verb])) {
+        if (!isset($service[$resourceSlug][$verb])) {
             self::FailRequest();
         }
-        return $service[$resource_slug][$verb];
+        return $service[$resourceSlug][$verb];
     }
 
-    private static function GetServiceMethods($class_name)
+    /**
+     * Gather internal methods for a given class
+     * @param string $className
+     * @return \ReflectionMethod[]
+     */
+    private static function GetServiceMethods($className)
     {
-        return (new \ReflectionClass($class_name))->getMethods(\ReflectionMethod::IS_PUBLIC);
+        return (new \ReflectionClass($className))->getMethods(\ReflectionMethod::IS_PUBLIC);
     }
 
+    /**
+     * Gather HTTP Request headers from the client
+     * @return string[]
+     */
     private static function GetHttpHeaders()
     {
         $headers = '';
@@ -113,19 +197,23 @@ class Api
         return $headers;
     }
 
+    /**
+     * Internal method to register a service class for Comforter to route
+     * @param string $name
+     */
     private static function RegisterSingleService($name)
     {
-        $newService = array();
-        if (substr($name, -7) == "Service") {
+        $pattern = (self::$serviceNamespace !== null) ? '/^' . self::$serviceNamespace . '\\\\[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff\\\\]*Service$/': '/^[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff\\\\]*Service$/';
+        $namespace = (self::$serviceNamespace !== null) ? self::$serviceNamespace . "\\": '';
+        if (preg_match($pattern, $name) === 1) {
             $serviceName = $name;
-        } else if (in_array($name . "Service", get_declared_classes())) {
-            $serviceName = $name . "Service";
+        } else if (in_array($namespace . $name . "Service", get_declared_classes())) {
+            $serviceName = $namespace . $name . "Service";
         } else {
             return;
         }
 
-
-        $slug = str_replace("Service", "", $serviceName);
+        $newService = array();
         foreach (self::GetServiceMethods($serviceName) as $method) {
             foreach (self::$verbs as $http_method) {
                 if (stripos($method->name, $http_method) === 0) {
@@ -135,26 +223,29 @@ class Api
             }
         }
 
+        $slug = str_replace("Service", "", $serviceName);
         self::$services[$slug] = $newService;
     }
 
+    /**
+     * Send Bad Request HTTP Response and kill execution.
+     */
     private static function FailRequest()
     {
         header("HTTP/1.1 400 Bad Request");
         exit;
     }
 
-    /*
-     * Public Methods
+    /**
+     * Initializer
      */
-
     public static function Start()
     {
         if (self::$autoRegister) {
-            // TODO Use Regex, maybe allow use to Set Service Namespace
-            // <ServiceNameSpace>\(*)Service
-            foreach (array_filter(get_declared_classes(), function ($c) {
-                return strrpos($c, "Service") !== false;
+            /* ^[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff\\]*Service$ */
+            $pattern = (self::$serviceNamespace !== null) ? '/^' . self::$serviceNamespace . '\\\\[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff\\\\]*Service$/': '/^[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff\\\\]*Service$/';
+            foreach (array_filter(get_declared_classes(), function ($c) use ($pattern) {
+                return preg_match($pattern, $c) === 1;
             }) as $service) {
                 self::RegisterSingleService($service);
             }
@@ -163,61 +254,148 @@ class Api
         self::AttendRequest();
     }
 
+    /**
+     * Stub method to send plain text unencoded responses.
+     * @param string $data
+     * @return string
+     */
     public static function PlainTextEncoder($data)
     {
         return $data;
     }
 
-    public static function RegisterService($service_name)
+    /**
+     * Register a callback to handle a requests for the specified MIME type.
+     * @param string $serviceName
+     * @see Comforter::RegisterSingleService
+     */
+    public static function RegisterService($serviceName)
     {
-        if (is_array($service_name)) {
-            foreach ($service_name as $sn) {
+        if (is_array($serviceName)) {
+            foreach ($serviceName as $sn) {
                 self::RegisterSingleService($sn);
             }
         }
-        self::RegisterSingleService($service_name);
+        self::RegisterSingleService($serviceName);
     }
 
-    public static function RegisterEncoder($type, $callback)
+    /**
+     * Register a callback to handle a requests for the specified MIME type.
+     * @param string $mimeType
+     * @param string $callbackName
+     */
+    public static function RegisterEncoder($mimeType, $callbackName)
     {
-        if ($callback === null) {
-            unset(self::$encoders[$type]);
+        if ($callbackName === null) {
+            unset(self::$encoders[$mimeType]);
         }
-        self::$encoders[$type] = $callback;
+        self::$encoders[$mimeType] = $callbackName;
     }
 
+    /**
+     * Add a non-standard HTTP Request Method to hook for services
+     * @param string $string
+     */
     public static function RegisterHttpRequestMethod($string)
     {
         self::$verbs[] = $string;
     }
 
+    /**
+     * Set Comforter to automatically scan and register valid service classes.
+     * @param bool $bool
+     * @throws ComforterErrorException
+     */
     public static function UseAutoRegisterService($bool)
     {
         if (is_bool($bool)) {
             self::$autoRegister = $bool;
         }
-        trigger_error('Setting must be boolean.', E_USER_ERROR);
+        throw new ComforterErrorException('Setting must be boolean.');
     }
 
+    /**
+     * Set Comforter to use gzip compression on responses when possible.
+     * @param bool $bool
+     * @throws ComforterErrorException
+     */
     public static function UseGzipCompression($bool)
     {
         if (is_bool($bool)) {
             self::$enableGzip = $bool;
         }
-        trigger_error('Setting must be boolean.', E_USER_ERROR);
+        throw new ComforterErrorException('Setting must be boolean.');
     }
 
+    /**
+     * Set Service Namespace
+     *
+     * When using the Auto Register feature, Comforter scans the whole space of
+     * declared classes. Setting the Service Namespace limits the search scope
+     * to just that space.
+     * @param string $namespace
+     * @throws ComforterErrorException
+     */
+    public static function UseServiceNamespace($namespace)
+    {
+        if ($namespace === null) {
+            self::$serviceNamespace = null;
+            return;
+        }
+
+        $exists = function ($name) {
+            $name .= "\\";
+            foreach(get_declared_classes() as $class)
+                if(strpos($class, $name) === 0) return true;
+            return false;
+        };
+
+        if ($exists($namespace)) {
+            self::$serviceNamespace = $namespace;
+            return;
+        }
+        throw new ComforterErrorException("Namespace '$namespace' is not defined.");
+    }
+
+    /**
+     * Set the default enconder for response data.
+     * @param string $encoder
+     * @throws ComforterErrorException
+     */
     public static function SetDefaultEncoder($encoder)
     {
         if ((isset(self::$encoders[$encoder]))) {
             self::$defaultEncoder = $encoder;
         }
-        trigger_error('"' . $encoder . '" has not been mapped.', E_USER_ERROR);
+        throw new ComforterErrorException("MIME Type '$encoder' does not have a registered encoder.");
     }
 }
 
+/**
+ * ComforterErrorException
+ *
+ * Comforter-specific exception for handling.
+ * @package Comforter
+ * @author  Gowon Patterson
+ * @since   1.0.0
+ */
+class ComforterErrorException extends \Exception {}
+
+/**
+ * AbstractServiceClass
+ *
+ * Skeleton class with helper methods to bootstrap the development of service classes.
+ * @package Comforter
+ * @author  Gowon Patterson
+ * @since   1.0.0
+ */
 abstract class AbstractServiceClass
 {
+    /**
+     * Set a key:value paired HTTP Header.
+     * @param string|array $key
+     * @param string $value
+     */
     protected static function AddHeader($key, $value = '')
     {
         if (is_array($key)) {
@@ -229,6 +407,11 @@ abstract class AbstractServiceClass
         }
     }
 
+    /**
+     * Send an HTTP Response Header.
+     * @param  int|string $code Code number or string to create non-standard response
+     * @throws ComforterErrorException
+     */
     protected static function SendHttpResponse($code)
     {
         // Last Updated: 3/7/14
@@ -304,7 +487,7 @@ abstract class AbstractServiceClass
         } elseif (is_string($code)) {
             header($protocol . ' ' . $code);
         } else {
-            trigger_error('Unsupported response code or object type "' . $code . '" was given.', E_USER_ERROR);
+            throw new ComforterErrorException("Unsupported response code or object type '$code' was given.");
         }
     }
 }

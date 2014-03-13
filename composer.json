@@ -1,8 +1,9 @@
 {
     "name": "gowondesigns/comforter",
+    "version": "1.0.0-RC1",
     "type": "library",
     "description": "A RESTful PHP micro-framework for web applications and APIs.",
-    "keywords": ["routing","simple","web service"],
+    "keywords": ["router","rest","framework","api"],
     "homepage": "http://github.com/gowondesigns/comforter",
     "license": "MIT",
     "authors": [
@@ -18,7 +19,7 @@
     },
     "autoload": {
         "psr-0": {
-            "Comforter": "src"
+            "Comforter\\": "src/"
         }
     }
 }
