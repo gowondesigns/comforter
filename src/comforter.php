@@ -364,10 +364,10 @@ class Api
      */
     public static function SetDefaultEncoder($encoder)
     {
-        if ((isset(self::$encoders[$encoder]))) {
-            self::$defaultEncoder = $encoder;
+        if (!isset(self::$encoders[$encoder])) {
+            throw new ComforterErrorException("MIME Type '$encoder' does not have a registered encoder.");
         }
-        throw new ComforterErrorException("MIME Type '$encoder' does not have a registered encoder.");
+        self::$defaultEncoder = $encoder;
     }
 }
 
