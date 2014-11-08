@@ -115,6 +115,7 @@ class Api
             $encoder = self::$encoders[$format];
         } elseif (self::$defaultEncoder !== null && isset(self::$encoders[self::$defaultEncoder])) {
             $encoder = self::$encoders[self::$defaultEncoder];
+            $format = self::$defaultEncoder;
         } else {
             self::FailRequest();
         }
