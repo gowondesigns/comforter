@@ -6,7 +6,7 @@
  * @copyright   2014 Gowon Patterson, Gowon Designs
  * @link        http://www.gowondesigns.com
  * @license     http://www.gowondesigns.com/license
- * @version     1.0.0
+ * @version     1.0.2
  * @package     Comforter
  *
  * MIT LICENSE
@@ -154,6 +154,7 @@ class Api
         }
 
         self::FailRequest();
+        exit;
     }
 
     /**
@@ -167,6 +168,9 @@ class Api
     private static function GetMethodBySlug($serviceName, $resourceSlug, $verb)
     {
         $service = self::$services[$serviceName];
+        $resourceSlug = strtolower($resourceSlug);
+        $verb = strtolower($verb);
+
         if (!isset($service[$resourceSlug][$verb])) {
             self::FailRequest();
         }
@@ -266,7 +270,7 @@ class Api
     }
 
     /**
-     * Register a callback to handle a requests for the specified MIME type.
+     * Register a class to route requests to
      * @param string $serviceName
      * @see Comforter::RegisterSingleService
      */
